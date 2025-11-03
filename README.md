@@ -1,108 +1,489 @@
-# README
+# CompTemplate
 
-This repository provides infastructure for the project to _[Briefly describe the aims and context of the analysis or research project here.]_
+This repository provides infrastructure for multi-repository R-based computational research projects with containerized development environments.
 
-See [Workspace setup](#workspace-setup) for details on how to set up a [multi-repository R-based development environment](#multi-repository-workflow) and a [containerised development environment](#r-development-container) for this project.
+## Table of Contents
 
-## Contact
+- [Quick Start](#quick-start)
+- [What This Template Provides](#what-this-template-provides)
+- [Working with Repositories](#working-with-repositories)
+- [Running the Pipeline](#running-the-pipeline)
+- [Managing Worktrees](#managing-worktrees)
+- [Devcontainer Setup](#devcontainer-setup)
+- [For Template Maintainers](#for-template-maintainers)
 
-For more information, please contact:  
-- [Name], [Email Address]  
-- [Name], [Email Address]
+## Quick Start
 
-## Links
+### Clone and Setup Everything
 
-- [URLs to data sources (e.g. OneDrive), GitHub repositories, publications, etc.]
+Copy and paste this command block to clone this repository and set up all sub-repositories:
 
-## Details
+```bash
+# Clone the CompTemplate repository
+git clone https://github.com/MiguelRodo/CompTemplate.git
+cd CompTemplate
 
-[Methods, timeline, team, data sources, software/tools, etc.]
+# Edit repos.list to specify your repositories
+# (Open repos.list and add your repo specifications)
 
-## Workspace setup
+# Run the setup script - creates repos, clones them, and configures workspace
+scripts/setup-repos.sh
+```
 
-This repository provides infrastructure for a multi-repository R-based research project.
-It can be used both to **set up a containerised development environment** and to **manage a VS Code workspace spanning multiple repositories** — both of which are optional.
+That's it! The `setup-repos.sh` script will:
+1. Create any missing repositories on GitHub
+2. Clone all specified repositories to the parent directory
+3. Generate a VS Code workspace file
+4. Configure Codespaces authentication
 
-<!--
+### For Existing Projects
 
-You may use this repository:
+If the repositories are already set up and you just want to clone them:
 
-- as part of an existing project, to quickly reproduce or continue analysis, or  
-- as a starting point for new projects with similar infrastructure needs.
+```bash
+git clone https://github.com/YOUR-ORG/YourProject.git
+cd YourProject
+scripts/helper/clone-repos.sh
+```
 
-!-->
+## What This Template Provides
 
-### Multi-repository workflow
+**Multi-Repository Management**: Easily work with multiple related Git repositories as a unified project.
 
-This repo supports easy setup of a multi-repository workspace on Linux, macOS or Windows.
+**Containerized R Environment**: Ready-to-use devcontainer with:
+- Bioconductor (RELEASE_3_20 by default)
+- Quarto with TinyTeX
+- radian (modern R console)
+- Pre-installed R packages (via renv)
 
-1. **Specify repositories**  
-   Edit `repos.list` in the root. See its header for format details.
+**Automated Scripts**:
+- `scripts/setup-repos.sh` - Complete project setup
+- `scripts/run-pipeline.sh` - Execute analysis pipeline
+- `scripts/add-branch.sh` - Create worktrees for parallel development
+- `scripts/update-branches.sh` - Sync devcontainer across worktrees
+- `scripts/update-scripts.sh` - Pull latest helper scripts
 
-2. **Clone repositories**  
-   ```bash
-   scripts/clone-repos.sh
-   ```
+**GitHub Actions**: Automated devcontainer builds pushed to GitHub Container Registry.
 
-  * Works on any OS with Git.
-  * On Windows, run in Git Bash (from Git for Windows).
+## Working with Repositories
 
-3. **Create a VS Code workspace (optional)**
+### Understanding repos.list
 
-   ```bash
-   scripts/vscode-workspace-add.sh
-   ```
+The `repos.list` file specifies which repositories to include. Format:
 
-   * Requires any version of `Python` or the `jq` utility.
-   * Then in VS Code: **File → Open Workspace from File…** → select `entire-project.code-workspace`.
+```bash
+# Clone full repository
+owner/repo
 
-### R development container
+# Clone specific branch
+owner/repo@branch
 
-A ready-to-use devcontainer config is provided under `.devcontainer/devcontainer.json`.
+# Create worktree from current repo
+@branch-name [target-directory]
 
-#### Base image
+# Clone with custom directory name
+owner/repo custom-name
+```
 
-* By default, the Dockerfile starts with
+**Examples:**
+```bash
+# Worktrees off the current repo (CompTemplate)
+@data-tidy
+@analysis analysis-folder
 
-  ```dockerfile
-  FROM bioconductor/bioconductor_docker:RELEASE_3_20
-  ```
+# External repositories
+SATVILab/projr
+SATVILab/UtilsCytoRSV@release
 
-  which gives you pre-built Bioconductor binaries.
-* To pick another Bioconductor release, change that `FROM` line (e.g. `RELEASE_3_19` instead of `RELEASE_3_20`).
-* To use a non-Bioconductor base (e.g. `rocker/r-verse:4.4`), update the same `FROM` line accordingly.
+# Worktrees off SATVILab/projr (because it's the last non-@ line)
+@dev
+@staging
+```
 
-#### Features
+### Where Do Repositories Go?
 
-The devcontainer includes:
+All repositories are cloned to the **parent directory** of CompTemplate:
 
-* **Quarto** (with TinyTeX)
-* Common Ubuntu packages for R/data science
-* **radian**, a modern R console
-* A **repos** feature to clone repos specified in `repos.list`. Important primarily for GitHub Codespaces, as it overrides default `Codespaces` Git authentication. Ensure that the environment variable `GH_TOKEN` is available as a Codespaces secret, and that it has permissions to clone the specified repositories.
-* A **config-r** feature that pre-installs packages from any `.devcontainer/renv/<dir>/renv.lock` into the global cache for faster container starts once built. Multiple `<dir>`s can be specified to install packages from multiple lockfiles.
+```
+workspaces/
+├── CompTemplate/          # This repo (contains repos.list and scripts)
+├── CompTemplate-analysis/ # @analysis worktree
+├── CompTemplate-paper/    # @paper worktree
+├── projr/                 # SATVILab/projr clone
+├── projr-dev/             # @dev worktree of projr
+└── UtilsCytoRSV/          # SATVILab/UtilsCytoRSV clone
+```
 
-#### Automated builds
+### VS Code Workspace
 
-A GitHub Actions workflow (`.github/workflows/devcontainer-build.yml`) will:
+Open all repositories together in VS Code:
 
-* Build the container on each push to `main` (or via manual dispatch).
-* Push images to GitHub Container Registry (`ghcr.io`) tagged by repo and branch.
-* Generate `.devcontainer/prebuild/devcontainer.json` pointing to the latest pre-built image, so VS Code can open almost instantly.
+```bash
+# Generate/update workspace file
+scripts/helper/vscode-workspace-add.sh
 
-To disable automatic builds, remove or comment out the `on.push` section in that workflow file.
+# Open in VS Code
+code entire-project.code-workspace
+```
 
-#### Dotfiles
+### Other Editors
 
-If running within a container, then typically additional configuration is convenient.
-For example, `radian` on Linux works poorly unless the option `auto_match` is set to `false`.
+Without VS Code, simply open each repository directory individually:
 
-A convenient way to say this is up is to use the `SATVILab/dotfiles` repository.
-After opening this repository in a container, run the following command:
+```bash
+# Navigate to any repository
+cd ../projr
+# Open in your editor
+vim .  # or emacs, RStudio, etc.
+```
+
+## Running the Pipeline
+
+The `run-pipeline.sh` script executes your analysis across all repositories.
+
+### Quick Run
+
+<details>
+<summary><b>From Bash</b></summary>
+
+```bash
+cd CompTemplate
+scripts/run-pipeline.sh
+```
+
+Options:
+- `-s, --skip-setup` - Skip repository setup
+- `-d, --skip-deps` - Skip R dependency installation
+- `-i, --include <names>` - Only run specific repositories
+- `-e, --exclude <names>` - Exclude specific repositories
+- `-n, --dry-run` - Show what would run without executing
+- `-v, --verbose` - Enable detailed logging
+
+Examples:
+```bash
+# Run only specific repos
+scripts/run-pipeline.sh --include "projr,UtilsCytoRSV"
+
+# Skip setup if repos are already cloned
+scripts/run-pipeline.sh --skip-setup
+
+# Preview without executing
+scripts/run-pipeline.sh --dry-run
+```
+
+</details>
+
+<details>
+<summary><b>From R</b></summary>
+
+```r
+# Set working directory to CompTemplate
+setwd("path/to/CompTemplate")
+
+# Run the pipeline
+system2("scripts/run-pipeline.sh")
+
+# With options
+system2("scripts/run-pipeline.sh", args = c("--skip-setup", "--verbose"))
+
+# On Windows, you may need to use bash explicitly
+system2("bash", args = c("scripts/run-pipeline.sh"))
+```
+
+</details>
+
+<details>
+<summary><b>From Python</b></summary>
+
+```python
+import subprocess
+import os
+
+# Set working directory to CompTemplate
+os.chdir('path/to/CompTemplate')
+
+# Run the pipeline
+subprocess.run(['scripts/run-pipeline.sh'])
+
+# With options
+subprocess.run([
+    'scripts/run-pipeline.sh',
+    '--skip-setup',
+    '--verbose'
+])
+
+# On Windows
+subprocess.run(['bash', 'scripts/run-pipeline.sh'])
+```
+
+</details>
+
+### What run-pipeline.sh Does
+
+1. **Setup** (unless `--skip-setup`):
+   - Runs `scripts/setup-repos.sh`
+   - Creates missing repos
+   - Clones repositories
+   - Updates workspace
+
+2. **Dependencies** (unless `--skip-deps`):
+   - Runs `scripts/helper/install-r-deps.sh`
+   - Installs R packages from `renv.lock` or `DESCRIPTION`
+
+3. **Execute**:
+   - Runs `run.sh` in each repository (if present)
+   - Stops on first failure
+
+### Creating run.sh in Your Repositories
+
+Each repository can have a `run.sh` script that `run-pipeline.sh` will execute:
+
+```bash
+#!/usr/bin/env bash
+# run.sh - Execute repository-specific analysis
+
+set -e
+
+echo "Running analysis for $(basename $(pwd))"
+
+# Example: Run R script
+Rscript analysis/main.R
+
+# Example: Render Quarto document
+quarto render analysis/report.qmd
+
+echo "Analysis complete"
+```
+
+Make it executable:
+```bash
+chmod +x run.sh
+```
+
+## Managing Worktrees
+
+Worktrees let you work on multiple branches simultaneously without cloning the entire repository multiple times.
+
+### Create a New Worktree
+
+```bash
+# From the CompTemplate directory
+scripts/add-branch.sh <branch-name> [target-directory]
+
+# Examples
+scripts/add-branch.sh data-tidy           # Creates ../CompTemplate-data-tidy
+scripts/add-branch.sh analysis my-folder  # Creates ../my-folder
+```
+
+This creates a worktree with:
+- Minimal infrastructure (only `.devcontainer/` and `.gitignore`)
+- Ready-to-use devcontainer from prebuild
+- Automatically added to `repos.list` and workspace
+
+### Update All Worktrees
+
+After updating the devcontainer configuration:
+
+```bash
+scripts/update-branches.sh
+
+# Preview changes
+scripts/update-branches.sh --dry-run
+```
+
+### Remove a Worktree
+
+```bash
+# Remove the worktree
+git worktree remove ../CompTemplate-data-tidy
+
+# Remove from repos.list manually
+# Remove from workspace
+scripts/helper/vscode-workspace-add.sh
+```
+
+## Devcontainer Setup
+
+### Base Configuration
+
+The devcontainer uses Bioconductor by default:
+
+```dockerfile
+FROM bioconductor/bioconductor_docker:RELEASE_3_20
+```
+
+To change the base image, edit `.devcontainer/Dockerfile`.
+
+### Features Included
+
+- **Quarto** with TinyTeX
+- **radian** (modern R console)
+- **Common Ubuntu packages** for R/data science
+- **repos feature**: Auto-clones repositories in Codespaces
+- **config-r feature**: Pre-installs R packages from lockfiles
+
+### Pre-installing R Packages
+
+Place `renv.lock` files in `.devcontainer/renv/<project>/` to pre-install packages during container build:
+
+```
+.devcontainer/
+└── renv/
+    ├── project1/
+    │   └── renv.lock
+    └── project2/
+        └── renv.lock
+```
+
+### Automated Builds
+
+GitHub Actions automatically builds and pushes devcontainer images:
+- Triggered on push to `main` branch
+- Images pushed to `ghcr.io`
+- Pre-built reference in `.devcontainer/prebuild/devcontainer.json`
+
+To disable: Remove the `on.push` section in `.github/workflows/devcontainer-build.yml`.
+
+### Using in Codespaces
+
+1. Ensure `GH_TOKEN` is set as a Codespaces secret
+2. Token needs permissions to clone specified repositories
+3. Codespaces will automatically use the pre-built image
+
+### Dotfiles Configuration
+
+For additional container customization (e.g., radian settings):
 
 ```bash
 git clone https://github.com/SATVILab/dotfiles.git "$HOME"/dotfiles
 "$HOME"/dotfiles/install-env.sh dev
 ```
 
-See `https://github.dev/SATVILab/dotfiles` for more information on the dotfiles repository.
+## For Template Maintainers
+
+### Testing
+
+<details>
+<summary><b>Manual Tests for setup-repos.sh</b></summary>
+
+```bash
+# Run manual test suite
+tests/test-setup-repos.sh
+
+# Tests include:
+# - Repository creation
+# - Cloning with various formats
+# - Worktree creation
+# - Workspace generation
+# - Codespaces auth configuration
+```
+
+</details>
+
+<details>
+<summary><b>Automated Tests for run-pipeline.sh</b></summary>
+
+```bash
+# Run automated test suite
+tests/test-run-pipeline.sh
+
+# Tests include:
+# - Dry-run mode
+# - Include/exclude filters
+# - Skip setup/deps flags
+# - Error handling
+```
+
+</details>
+
+### Updating Helper Scripts
+
+Pull the latest helper scripts from the upstream CompTemplate repository:
+
+```bash
+scripts/update-scripts.sh
+
+# From a specific branch
+scripts/update-scripts.sh --branch dev
+
+# Preview changes
+scripts/update-scripts.sh --dry-run
+```
+
+This only updates `scripts/helper/` - main scripts are not affected.
+
+### Repository Structure
+
+```
+.
+├── .devcontainer/
+│   ├── devcontainer.json        # Main devcontainer config
+│   ├── Dockerfile               # Container definition
+│   ├── prebuild/                # Pre-built image reference
+│   │   └── devcontainer.json
+│   └── renv/                    # R package lockfiles
+├── .github/
+│   └── workflows/
+│       ├── devcontainer-build.yml
+│       └── add-issues-to-project.yml
+├── scripts/
+│   ├── setup-repos.sh           # Main setup orchestrator
+│   ├── run-pipeline.sh          # Pipeline executor
+│   ├── add-branch.sh            # Create worktrees
+│   ├── update-branches.sh       # Update worktree devcontainers
+│   ├── update-scripts.sh        # Pull latest helper scripts
+│   └── helper/                  # Helper scripts (updated from upstream)
+│       ├── clone-repos.sh       # ⭐ Canonical path logic
+│       ├── vscode-workspace-add.sh
+│       ├── codespaces-auth-add.sh
+│       ├── create-repos.sh
+│       └── install-r-deps.sh
+├── tests/
+│   ├── test-setup-repos.sh      # Manual tests
+│   └── test-run-pipeline.sh     # Automated tests
+├── repos.list                   # Repository specifications
+├── entire-project.code-workspace # VS Code workspace
+└── README.md
+
+```
+
+### Path Logic
+
+All helper scripts follow `clone-repos.sh` path conventions:
+
+**Key Principles:**
+- All repositories are cloned to the **parent directory** of the current directory
+- Running from `/workspaces/CompTemplate` → repos go to `/workspaces/`
+- Worktrees are named `<repo>-<branch>` unless custom name provided
+- Single-branch clones may or may not include branch suffix (depends on reference count)
+
+**Examples:**
+```bash
+# From /workspaces/CompTemplate
+
+owner/repo           # → /workspaces/repo
+owner/repo@branch    # → /workspaces/repo-branch (if multiple refs) or /workspaces/repo
+@branch              # → /workspaces/CompTemplate-branch
+@branch custom-name  # → /workspaces/custom-name
+```
+
+See `.github/copilot-instructions.md` for detailed path resolution documentation.
+
+---
+
+## License
+
+[Specify your license here]
+
+## Contact
+
+For more information, please contact:
+- [Name], [Email Address]
+- [Name], [Email Address]
+
+## Citation
+
+If you use this template, please cite:
+```
+[Citation information]
+```
