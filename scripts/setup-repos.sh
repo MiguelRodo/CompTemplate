@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# setup-compendium.sh — orchestrate project bootstrapping
-# Requires: bash 3.2+, curl, git, and your four helper scripts
+# setup-repos.sh — orchestrate project bootstrapping
+# Requires: bash 3.2+, curl, git, and helper scripts
 
 set -euo pipefail
 
 # — Paths & defaults —
-PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 if [ ! -f "$PROJECT_ROOT/repos.list" ] && [ -f "$PROJECT_ROOT/repos-to-clone.list" ]; then
   REPOS_FILE="$PROJECT_ROOT/repos-to-clone.list"
 else
@@ -16,10 +18,10 @@ PUBLIC_FLAG=false
 PERMISSIONS_OPT=""
 TOOL_OPT=""
 
-CODESPACES_SCRIPT="$PROJECT_ROOT/scripts/codespaces-auth-add.sh"
-CREATE_SCRIPT="$PROJECT_ROOT/scripts/create-repos.sh"
-CLONE_SCRIPT="$PROJECT_ROOT/scripts/clone-repos.sh"
-WORKSPACE_SCRIPT="$PROJECT_ROOT/scripts/vscode-workspace-add.sh"
+CODESPACES_SCRIPT="$SCRIPT_DIR/helper/codespaces-auth-add.sh"
+CREATE_SCRIPT="$SCRIPT_DIR/helper/create-repos.sh"
+CLONE_SCRIPT="$SCRIPT_DIR/helper/clone-repos.sh"
+WORKSPACE_SCRIPT="$SCRIPT_DIR/helper/vscode-workspace-add.sh"
 
 usage() {
   cat <<EOF
