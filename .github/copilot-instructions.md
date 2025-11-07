@@ -145,8 +145,8 @@ SATVILab/other@dev → /workspaces/other
 - Useful after devcontainer image updates
 
 ### `scripts/update-scripts.sh`
-- Pulls latest helper scripts from `github.com/MiguelRodo/CompTemplate/scripts`
-- Only updates the `scripts/helper/` directory
+- Pulls latest scripts from `github.com/MiguelRodo/CompTemplate/scripts`
+- Updates all scripts in the `scripts/` directory (including `scripts/helper/`)
 
 ## Workflow
 
@@ -295,8 +295,8 @@ For full integration testing:
 - Requires jq or python3
 
 **`scripts/update-scripts.sh`**
-- Pulls latest helper scripts from MiguelRodo/CompTemplate
-- Only updates `scripts/helper/` directory
+- Pulls latest scripts from MiguelRodo/CompTemplate
+- Updates all scripts in `scripts/` directory (including `scripts/helper/`)
 - Options: `-b <branch>`, `-n` (dry-run), `-f` (force)
 - Creates commit with changes
 - Environment: `UPSTREAM_BRANCH` to override default branch
