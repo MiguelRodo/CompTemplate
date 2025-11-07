@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# update-scripts.sh — Update helper scripts from MiguelRodo/CompTemplate
+# update-scripts.sh — Update scripts from MiguelRodo/CompTemplate
 # Portable: Bash ≥3.2 (macOS default), Linux, WSL, Git Bash
 #
-# This script pulls the latest helper scripts from the CompTemplate repository
+# This script pulls the latest scripts from the CompTemplate repository
 
 set -Eeo pipefail
 
 # --- Configuration ---
 UPSTREAM_REPO="https://github.com/MiguelRodo/CompTemplate.git"
 UPSTREAM_BRANCH="${UPSTREAM_BRANCH:-main}"
-SCRIPTS_SUBDIR="scripts/helper"
+SCRIPTS_SUBDIR="scripts"
 
 # --- Paths ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-HELPER_DIR="$SCRIPT_DIR/helper"
+TARGET_DIR="$SCRIPT_DIR"
 
 # --- Usage ---
 usage() {
   cat <<EOF
 Usage: $0 [options]
 
-Update helper scripts from the upstream CompTemplate repository.
+Update scripts from the upstream CompTemplate repository.
 
 This script:
   1. Clones/pulls the latest MiguelRodo/CompTemplate repository
-  2. Copies scripts from scripts/helper/ to local scripts/helper/
+  2. Copies all scripts from scripts/ directory (including helper/ subdirectory)
   3. Preserves executable permissions
   4. Creates a commit with the updates
 
@@ -45,8 +45,7 @@ Examples:
   $0 --force            # Force update without prompts
 
 Notes:
-  - Only updates files in scripts/helper/ directory
-  - Does NOT update main scripts in scripts/ directory
+  - Updates all files in scripts/ directory (including helper/ subdirectory)
   - Preserves local modifications to other files
   - Creates a git commit with the changes
 EOF
@@ -81,12 +80,12 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 # Check for uncommitted changes
-if ! $FORCE && ! git diff --quiet HEAD -- "$HELPER_DIR"; then
-  echo "Error: You have uncommitted changes in scripts/helper/" >&2
+if ! $FORCE && ! git diff --quiet HEAD -- "$TARGET_DIR"; then
+  echo "Error: You have uncommitted changes in scripts/" >&2
   echo "Commit or stash your changes, or use --force to overwrite." >&2
   echo "" >&2
   echo "Changed files:" >&2
-  git status --short "$HELPER_DIR" >&2
+  git status --short "$TARGET_DIR" >&2
   exit 1
 fi
 
@@ -116,23 +115,39 @@ echo ""
 echo "Files to update:"
 SCRIPT_COUNT=0
 
-for script in "$UPSTREAM_SCRIPTS"/*; do
-  [ ! -f "$script" ] && continue
-  SCRIPT_NAME="$(basename "$script")"
+# Function to recursively list and count files
+list_scripts() {
+  local src_dir="$1"
+  local dst_dir="$2"
+  local rel_path="$3"
   
-  if [ -f "$HELPER_DIR/$SCRIPT_NAME" ]; then
-    # Check if different
-    if ! diff -q "$script" "$HELPER_DIR/$SCRIPT_NAME" >/dev/null 2>&1; then
-      echo "  ✓ $SCRIPT_NAME (modified)"
-      SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
-    else
-      echo "  = $SCRIPT_NAME (unchanged)"
+  for item in "$src_dir"/*; do
+    [ ! -e "$item" ] && continue
+    
+    local item_name="$(basename "$item")"
+    local rel_item="${rel_path:+$rel_path/}$item_name"
+    
+    if [ -d "$item" ]; then
+      # Recursively process subdirectories
+      list_scripts "$item" "$dst_dir/$item_name" "$rel_item"
+    elif [ -f "$item" ]; then
+      # Compare files
+      if [ -f "$dst_dir/$item_name" ]; then
+        if ! diff -q "$item" "$dst_dir/$item_name" >/dev/null 2>&1; then
+          echo "  ✓ $rel_item (modified)"
+          SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
+        else
+          echo "  = $rel_item (unchanged)"
+        fi
+      else
+        echo "  + $rel_item (new)"
+        SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
+      fi
     fi
-  else
-    echo "  + $SCRIPT_NAME (new)"
-    SCRIPT_COUNT=$((SCRIPT_COUNT + 1))
-  fi
-done
+  done
+}
+
+list_scripts "$UPSTREAM_SCRIPTS" "$TARGET_DIR" ""
 
 if [ "$SCRIPT_COUNT" -eq 0 ]; then
   echo ""
@@ -161,30 +176,46 @@ fi
 echo ""
 echo "Updating scripts..."
 
-mkdir -p "$HELPER_DIR"
+# Function to recursively copy files
+copy_scripts() {
+  local src_dir="$1"
+  local dst_dir="$2"
+  local rel_path="$3"
+  
+  for item in "$src_dir"/*; do
+    [ ! -e "$item" ] && continue
+    
+    local item_name="$(basename "$item")"
+    local rel_item="${rel_path:+$rel_path/}$item_name"
+    
+    if [ -d "$item" ]; then
+      # Create directory if needed
+      mkdir -p "$dst_dir/$item_name"
+      # Recursively copy subdirectories
+      copy_scripts "$item" "$dst_dir/$item_name" "$rel_item"
+    elif [ -f "$item" ]; then
+      # Copy file and preserve permissions
+      cp "$item" "$dst_dir/$item_name"
+      chmod +x "$dst_dir/$item_name"
+      echo "  ✓ Updated $rel_item"
+    fi
+  done
+}
 
-for script in "$UPSTREAM_SCRIPTS"/*; do
-  [ ! -f "$script" ] && continue
-  SCRIPT_NAME="$(basename "$script")"
-  
-  cp "$script" "$HELPER_DIR/$SCRIPT_NAME"
-  chmod +x "$HELPER_DIR/$SCRIPT_NAME"
-  
-  echo "  ✓ Updated $SCRIPT_NAME"
-done
+copy_scripts "$UPSTREAM_SCRIPTS" "$TARGET_DIR" ""
 
 # --- Commit changes ---
 echo ""
 echo "Committing changes..."
 
-git add "$HELPER_DIR"
+git add "$TARGET_DIR"
 
 if git diff --staged --quiet; then
   echo "No changes to commit (files may be identical)."
 else
-  COMMIT_MSG="Update helper scripts from CompTemplate@$UPSTREAM_BRANCH
+  COMMIT_MSG="Update scripts from CompTemplate@$UPSTREAM_BRANCH
 
-Updated scripts in scripts/helper/ from:
+Updated scripts in scripts/ from:
 Repository: $UPSTREAM_REPO
 Branch: $UPSTREAM_BRANCH
 Date: $(date -u +%Y-%m-%d)"

@@ -61,7 +61,7 @@ scripts/helper/clone-repos.sh
 - `scripts/run-pipeline.sh` - Execute analysis pipeline
 - `scripts/add-branch.sh` - Create worktrees for parallel development
 - `scripts/update-branches.sh` - Sync devcontainer across worktrees
-- `scripts/update-scripts.sh` - Pull latest helper scripts
+- `scripts/update-scripts.sh` - Pull latest scripts from CompTemplate
 
 **GitHub Actions**: Automated devcontainer builds pushed to GitHub Container Registry.
 
@@ -398,7 +398,7 @@ tests/test-run-pipeline.sh
 
 ### Updating Helper Scripts
 
-Pull the latest helper scripts from the upstream CompTemplate repository:
+Pull the latest scripts from the upstream CompTemplate repository:
 
 ```bash
 scripts/update-scripts.sh
@@ -410,7 +410,7 @@ scripts/update-scripts.sh --branch dev
 scripts/update-scripts.sh --dry-run
 ```
 
-This only updates `scripts/helper/` - main scripts are not affected.
+This updates all scripts in `scripts/` directory, including both main scripts and `scripts/helper/` scripts.
 
 ### Repository Structure
 
@@ -431,7 +431,7 @@ This only updates `scripts/helper/` - main scripts are not affected.
 │   ├── run-pipeline.sh          # Pipeline executor
 │   ├── add-branch.sh            # Create worktrees
 │   ├── update-branches.sh       # Update worktree devcontainers
-│   ├── update-scripts.sh        # Pull latest helper scripts
+│   ├── update-scripts.sh        # Pull latest scripts from CompTemplate
 │   └── helper/                  # Helper scripts (updated from upstream)
 │       ├── clone-repos.sh       # ⭐ Canonical path logic
 │       ├── vscode-workspace-add.sh
