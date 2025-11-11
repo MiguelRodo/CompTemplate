@@ -170,6 +170,7 @@ check_prerequisites() {
     fi
   done
   [[ "$debug" == true ]] && echo "All prerequisites met." >&2
+  return 0
 }
 
 # --- Usage -------------------------------------------------------------------
@@ -684,6 +685,7 @@ parse_args() {
   fi
 
   [[ "$DEBUG" == true ]] && echo "Argument parsing complete." >&2
+  return 0
 }
 
 plan_forward() {
@@ -764,6 +766,7 @@ plan_forward() {
     esac
   done <"$file"
   [[ "$debug" == true ]] && echo "Planning complete." >&2
+  return 0
 }
 
 # --- Main --------------------------------------------------------------------
