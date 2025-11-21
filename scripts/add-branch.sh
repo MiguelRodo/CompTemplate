@@ -94,6 +94,13 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+# Sanitize branch name for use in directory paths
+# Replaces forward slashes with dashes to avoid nested directories
+sanitize_branch_name() {
+  local branch="$1"
+  printf '%s\n' "${branch//\//-}"
+}
+
 # --- Determine destination ---
 REPO_NAME="$(basename "$PROJECT_ROOT")"
 PARENT_DIR="$(dirname "$PROJECT_ROOT")"
@@ -101,7 +108,8 @@ PARENT_DIR="$(dirname "$PROJECT_ROOT")"
 if [ -n "$TARGET_DIR" ]; then
   DEST="$PARENT_DIR/$TARGET_DIR"
 else
-  DEST="$PARENT_DIR/${REPO_NAME}-${BRANCH_NAME}"
+  SAFE_BRANCH_NAME="$(sanitize_branch_name "$BRANCH_NAME")"
+  DEST="$PARENT_DIR/${REPO_NAME}-${SAFE_BRANCH_NAME}"
 fi
 
 echo "Creating worktree: $DEST"
