@@ -291,6 +291,13 @@ repo_basename_from_https() {
   printf '%s\n' "${url##*/}"
 }
 
+# Sanitize branch name for use in directory paths
+# Replaces forward slashes with dashes to avoid nested directories
+sanitize_branch_name() {
+  local branch="$1"
+  printf '%s\n' "${branch//\//-}"
+}
+
 # --- Git helpers -------------------------------------------------------------
 # Returns origin URL for a repo dir, or fails cleanly (no ERR trap)
 safe_get_origin_url() {
@@ -439,7 +446,8 @@ clone_one_repo() {
     # put it in <repo>-<branch>; otherwise let it take <repo>.
     local ref_count; ref_count="$(plan_ref_count "$remote_https")"
     if [ "$ref_count" -gt 1 ]; then
-      dest="$base_dir/${repo_dir}-${ref}"
+      local safe_ref; safe_ref="$(sanitize_branch_name "$ref")"
+      dest="$base_dir/${repo_dir}-${safe_ref}"
       [[ "$debug" == true ]] && echo "clone_one_repo: single-branch clone (multiple refs: $ref_count), dest='$dest'" >&2
     else
       dest="$base_dir/$repo_dir"
@@ -572,7 +580,8 @@ create_worktree_for_branch() {
     dest="$parent_dir/$target_dir"
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: using explicit target_dir, dest='$dest'" >&2
   else
-    dest="$parent_dir/${repo_base}-${branch}"
+    local safe_branch; safe_branch="$(sanitize_branch_name "$branch")"
+    dest="$parent_dir/${repo_base}-${safe_branch}"
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: using default dest='$dest'" >&2
   fi
 
