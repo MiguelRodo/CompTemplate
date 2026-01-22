@@ -49,6 +49,8 @@ PROCESSED_LINES=0
 SKIPPED_WORKTREE_LINES=0
 SKIPPED_COMMENT_LINES=0
 
+# The following logic duplicates the main script's processing logic
+# This is intentional to verify the actual behavior matches expectations
 while IFS= read -r line || [ -n "$line" ]; do
   # Skip empty lines and comments
   case "$line" in ''|\#*) 

@@ -88,6 +88,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in ''|\#*) continue ;; esac
   
   # Skip worktree lines (lines starting with @)
+  # Trim leading whitespace first to handle indented @ lines
   trimmed="${line#"${line%%[![:space:]]*}"}"
   case "$trimmed" in @*) continue ;; esac
 
