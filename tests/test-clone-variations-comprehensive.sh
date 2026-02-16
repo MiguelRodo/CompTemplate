@@ -113,43 +113,49 @@ create_bare_repo() {
   shift 2
   local branches=("$@")
   
-  local original_dir="$(pwd)"
-  
-  git init --bare -q "$bare_path"
-  
-  # Create temp clone to add content
-  local temp_clone="$TEST_ROOT/temp-$repo_name"
-  git clone -q "$bare_path" "$temp_clone"
-  cd "$temp_clone"
-  git config user.email "test@example.com"
-  git config user.name "Test User"
-  
-  # Initial commit
-  echo "# $repo_name" > README.md
-  git add README.md
-  git commit -q -m "Initial commit"
-  local default_branch=$(git symbolic-ref --short HEAD)
-  git push -q origin "$default_branch"
-  
-  # Create additional branches
-  for branch in "${branches[@]}"; do
-    git checkout -q "$default_branch"
-    git checkout -q -b "$branch"
-    echo "$branch content" >> README.md
+  # Use subshell to ensure we always return to original directory
+  (
+    git init --bare -q "$bare_path"
+    
+    # Create temp clone to add content
+    local temp_clone="$TEST_ROOT/temp-$repo_name"
+    git clone -q "$bare_path" "$temp_clone"
+    cd "$temp_clone"
+    git config user.email "test@example.com"
+    git config user.name "Test User"
+    
+    # Initial commit
+    echo "# $repo_name" > README.md
     git add README.md
-    git commit -q -m "$branch commit"
-    git push -q origin "$branch"
-  done
-  
-  cd "$TEST_ROOT"
-  rm -rf "$temp_clone"
-  
-  # Set HEAD in bare repo to default branch
-  cd "$bare_path"
-  git symbolic-ref HEAD "refs/heads/$default_branch"
-  
-  # Return to original directory
-  cd "$original_dir"
+    git commit -q -m "Initial commit"
+    
+    # Get default branch and validate it exists
+    local default_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+    if [ -z "$default_branch" ]; then
+      echo "Error: Could not determine default branch for $repo_name" >&2
+      return 1
+    fi
+    
+    git push -q origin "$default_branch"
+    
+    # Create additional branches
+    for branch in "${branches[@]}"; do
+      git checkout -q "$default_branch"
+      git checkout -q -b "$branch"
+      echo "$branch content" >> README.md
+      git add README.md
+      git commit -q -m "$branch commit"
+      git push -q origin "$branch"
+    done
+    
+    cd "$TEST_ROOT"
+    rm -rf "$temp_clone"
+    
+    # Set HEAD in bare repo to default branch
+    cd "$bare_path"
+    git symbolic-ref HEAD "refs/heads/$default_branch"
+  )
+  # Subshell ensures we return to original directory even if errors occur
 }
 
 # Create test repositories
