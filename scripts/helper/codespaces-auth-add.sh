@@ -10,7 +10,7 @@ set -o pipefail
 
 # ——— Defaults ———————————————————————————————————————————————
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DEVFILE="$PROJECT_ROOT/.devcontainer/devcontainer.json"
 if [ ! -f "$PROJECT_ROOT/repos.list" ] && [ -f "$PROJECT_ROOT/repos-to-clone.list" ]; then
   REPOS_FILE="$PROJECT_ROOT/repos-to-clone.list"
