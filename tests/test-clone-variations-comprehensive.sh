@@ -1,7 +1,43 @@
 #!/usr/bin/env bash
 # test-clone-variations-comprehensive.sh — Comprehensive test for all clone-repos.sh variations
-# Tests all ways to specify cloning repos, branches, worktrees with/without custom directories
-# Assumes repos and branches already exist (after first step of setup-repos.sh)
+#
+# PURPOSE:
+#   Tests all ways to specify cloning repos, branches, worktrees with/without custom directories
+#   Assumes repos and branches already exist (simulating post-setup state)
+#
+# COVERAGE (16 test scenarios, 32 assertions):
+#   1. Full repo clone (owner/repo) - default single-branch behavior
+#   2. Full repo clone with custom target directory
+#   3. Full repo clone with -a flag (all branches)
+#   4. Single-branch clone (owner/repo@branch) - single reference, no suffix
+#   5. Single-branch clone with custom target directory
+#   6. Worktree from current repo (@branch) - default behavior
+#   7. Worktree with custom target directory
+#   8. Worktree with --no-worktree flag (clone instead of worktree)
+#   9. Fallback repo tracking across multiple clone lines
+#   10. Branch name sanitization (feature/test → feature-test in paths)
+#   11. Multiple references to same repo (branch suffix logic)
+#   12. Single reference to repo (no branch suffix)
+#   13. Absolute path cloning
+#   14. file:// URL cloning
+#   15. Error handling (non-empty directory)
+#
+# TESTED VARIATIONS:
+#   - Clone types: full clone, single-branch clone, worktree
+#   - Target specification: default, custom directory
+#   - Flags: -a (all branches), --no-worktree
+#   - Remote formats: owner/repo, file://, absolute paths
+#   - Branch naming: simple names, names with slashes
+#   - Reference counting: single vs multiple references (affects suffix logic)
+#   - Fallback repo: tracking across multiple operations
+#
+# USAGE:
+#   ./tests/test-clone-variations-comprehensive.sh
+#
+# NOTES:
+#   - Creates temporary bare git repositories for testing
+#   - All tests are isolated in separate workspace directories
+#   - Cleans up automatically on exit
 
 set -e
 

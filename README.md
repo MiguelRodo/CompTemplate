@@ -364,6 +364,28 @@ git clone https://github.com/SATVILab/dotfiles.git "$HOME"/dotfiles
 ### Testing
 
 <details>
+<summary><b>Comprehensive Clone Variations Test</b></summary>
+
+```bash
+# Run comprehensive test for clone-repos.sh
+tests/test-clone-variations-comprehensive.sh
+
+# Tests all clone-repos.sh variations including:
+# - Full repo clones (with/without -a flag, with/without custom target)
+# - Single-branch clones (with/without custom target)
+# - Worktrees (with/without custom target, with/without --no-worktree flag)
+# - Fallback repo tracking across multiple clone operations
+# - Branch name sanitization (slashes → dashes in directory names)
+# - Multiple vs single reference logic (branch suffix behavior)
+# - file:// URLs and absolute path support
+# - Error handling (non-empty directories)
+
+# Coverage: 16 test scenarios with 32 assertions
+```
+
+</details>
+
+<details>
 <summary><b>Manual Tests for setup-repos.sh</b></summary>
 
 ```bash
@@ -439,6 +461,7 @@ This updates all scripts in `scripts/` directory, including both main scripts an
 │       ├── create-repos.sh
 │       └── install-r-deps.sh
 ├── tests/
+│   ├── test-clone-variations-comprehensive.sh  # Comprehensive clone-repos.sh tests
 │   ├── test-setup-repos.sh      # Manual tests
 │   └── test-run-pipeline.sh     # Automated tests
 ├── repos.list                   # Repository specifications
