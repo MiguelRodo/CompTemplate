@@ -6,21 +6,22 @@
 #   Assumes repos and branches already exist (simulating post-setup state)
 #
 # COVERAGE (16 test scenarios, 32 assertions):
-#   1. Full repo clone (owner/repo) - default single-branch behavior
-#   2. Full repo clone with custom target directory
-#   3. Full repo clone with -a flag (all branches)
-#   4. Single-branch clone (owner/repo@branch) - single reference, no suffix
-#   5. Single-branch clone with custom target directory
-#   6. Worktree from current repo (@branch) - default behavior
-#   7. Worktree with custom target directory
-#   8. Worktree with --no-worktree flag (clone instead of worktree)
-#   9. Fallback repo tracking across multiple clone lines
-#   10. Branch name sanitization (feature/test → feature-test in paths)
-#   11. Multiple references to same repo (branch suffix logic)
-#   12. Single reference to repo (no branch suffix)
-#   13. Absolute path cloning
-#   14. file:// URL cloning
-#   15. Error handling (non-empty directory)
+#   1. Setup: Create local bare repositories with branches
+#   2. Full repo clone (owner/repo) - default single-branch behavior
+#   3. Full repo clone with custom target directory
+#   4. Full repo clone with -a flag (all branches)
+#   5. Single-branch clone (owner/repo@branch) - single reference, no suffix
+#   6. Single-branch clone with custom target directory
+#   7. Worktree from current repo (@branch) - default behavior
+#   8. Worktree with custom target directory
+#   9. Worktree with --no-worktree flag (clone instead of worktree)
+#   10. Fallback repo tracking across multiple clone lines
+#   11. Branch name sanitization (feature/test → feature-test in paths)
+#   12. Multiple references to same repo (branch suffix logic)
+#   13. Single reference to repo (no branch suffix)
+#   14. Absolute path cloning
+#   15. file:// URL cloning
+#   16. Error handling (non-empty directory)
 #
 # TESTED VARIATIONS:
 #   - Clone types: full clone, single-branch clone, worktree
