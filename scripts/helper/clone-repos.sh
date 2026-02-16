@@ -397,6 +397,50 @@ safe_get_origin_url() {
   printf '%s\n' "$url"
 }
 
+# Check if repos.list contains any non-local remotes (requires GitHub auth)
+has_non_local_remotes() {
+  local file="$1"
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Skip comments and blank lines
+    case "$line" in \#*|"") continue ;; esac
+    # Remove inline comments
+    case "$line" in *" # "*) line="${line%% # *}" ;; *" #"*) line="${line%% #*}" ;; esac
+    # Trim whitespace
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    line=${line%$'\r'}
+    [ -z "$line" ] && continue
+    
+    # Extract first token
+    set -f
+    set -- $line
+    [ "$#" -eq 0 ] && { set +f; continue; }
+    local first="$1"
+    set +f
+    
+    # Skip @branch lines (use fallback repo)
+    case "$first" in @*) continue ;; esac
+    
+    # Extract repo spec (remove @branch if present)
+    local repo_spec="${first%@*}"
+    
+    # Check if it's a local remote
+    case "$repo_spec" in
+      file://*|/*) continue ;;  # Local path
+      */*)
+        # Check if it looks like owner/repo (GitHub format)
+        if [[ "$repo_spec" =~ ^[^/]+/[^/]+$ ]]; then
+          return 0  # Found non-local remote
+        fi
+        ;;
+      https://*)
+        return 0  # Found non-local remote
+        ;;
+    esac
+  done <"$file"
+  return 1  # All remotes are local
+}
+
 get_current_repo_remote_https() {
   git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
     echo "Error: not inside a Git working tree; cannot derive fallback repo." >&2
@@ -737,6 +781,7 @@ create_worktree_for_branch() {
       git -C "$dest" push -u origin HEAD:"$branch" || true
     fi
   elif git -C "$base" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+    echo "Branch exists: $branch (on remote)"
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: branch exists on origin, tracking it" >&2
     echo "Adding worktree $dest (tracking origin/$branch)"
     # Ensure the remote-tracking ref exists even in single-branch clones
@@ -761,6 +806,7 @@ create_worktree_for_branch() {
     fi
   else
     # New branch off default; cope with single-branch bases (no origin/<default>)
+    echo "Branch not found: $branch (on remote, creating new)"
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: creating new branch from default" >&2
     local defb base_ref
     defb="$(default_remote_branch "$base")"
@@ -894,7 +940,13 @@ plan_forward() {
 main() {
   parse_args "$@"
   check_prerequisites "$DEBUG"
-  check_non_interactive_auth "$DEBUG"
+  
+  # Skip authentication check if all remotes are local
+  if has_non_local_remotes "$REPOS_FILE"; then
+    check_non_interactive_auth "$DEBUG"
+  else
+    [[ "$DEBUG" == true ]] && echo "All remotes are local; skipping authentication check." >&2
+  fi
 
   local start_dir parent_dir
   start_dir="$(pwd)"
@@ -984,6 +1036,10 @@ main() {
             fallback_repo_local="$base_abs"
             remember_remote "$this_remote_https" "$fallback_repo_local"
           elif [ "$seen_before" -eq 0 ]; then
+            fallback_repo_local="$CLONE_DEST"
+            remember_remote "$this_remote_https" "$fallback_repo_local"
+          else
+            # Repo was seen before: update fallback_repo_local to the actual clone destination
             fallback_repo_local="$CLONE_DEST"
             remember_remote "$this_remote_https" "$fallback_repo_local"
           fi
