@@ -93,6 +93,11 @@ create_bare_repo() {
   
   cd "$TEST_ROOT"
   rm -rf "$temp_clone"
+  
+  # Set HEAD in bare repo to default branch
+  cd "$bare_path"
+  git symbolic-ref HEAD "refs/heads/$default_branch"
+  cd "$TEST_ROOT"
 }
 
 # Setup bare repos
@@ -160,14 +165,15 @@ echo "# WS2" > README.md
 git add README.md
 git commit -q -m "Init"
 
+# Use a custom directory to avoid conflicts with later tests
 cat > repos.list <<EOF
-file://$REPO2_BARE@staging
+file://$REPO2_BARE@staging repo2-staging-only
 EOF
 
 "$CLONE_SCRIPT" -f repos.list >/dev/null 2>&1 || true
 
-if [ -d "$TEST_ROOT/repo2" ]; then
-  cd "$TEST_ROOT/repo2"
+if [ -d "$TEST_ROOT/repo2-staging-only" ]; then
+  cd "$TEST_ROOT/repo2-staging-only"
   CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   if [ "$CURRENT_BRANCH" = "staging" ]; then
     print_pass "Single-branch clone succeeded with correct branch"
@@ -450,7 +456,7 @@ file://$REPO2_BARE
 @staging
 EOF
 
-"$CLONE_SCRIPT" -f repos.list >/dev/null 2>&1 || true
+"$CLONE_SCRIPT" -f repos.list 2>&1 | grep -E "^(▶|Summary:|Adding|Cloning)" || true
 
 # First @dev should use ws8's origin (repo1)
 # After file://$REPO2_BARE, fallback changes to repo2
@@ -468,8 +474,9 @@ if [ -d "$TEST_ROOT/ws8-dev" ]; then
 fi
 
 # Check if second worktree used repo2
-if [ -d "$TEST_ROOT/ws8-staging" ]; then
-  cd "$TEST_ROOT/ws8-staging"
+# The worktree should be named based on the cloned repo (repo2-staging), not ws8-staging
+if [ -d "$TEST_ROOT/repo2-staging" ]; then
+  cd "$TEST_ROOT/repo2-staging"
   REMOTE_URL=$(git config --get remote.origin.url 2>/dev/null || echo "")
   if echo "$REMOTE_URL" | grep -q "repo2"; then
     print_pass "Second @branch used updated fallback (repo2)"
@@ -479,6 +486,8 @@ if [ -d "$TEST_ROOT/ws8-staging" ]; then
   fi
 else
   print_fail "Second worktree not created"
+  print_info "Looking for: $TEST_ROOT/repo2-staging"
+  ls -la "$TEST_ROOT" | grep -E "repo2|ws8" || true
 fi
 
 # ============================================

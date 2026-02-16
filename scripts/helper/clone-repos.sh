@@ -153,7 +153,7 @@ ensure_base_exists() { # remote https, base_abs_path, debug
     [[ "$debug" == true ]] && echo "ensure_base_exists: clone failed, returning error code 3" >&2
     return 3
   fi
-  ((CNT_CLONED_FULL++))
+  CNT_CLONED_FULL=$((CNT_CLONED_FULL + 1))
   [[ "$debug" == true ]] && echo "ensure_base_exists: base clone successful" >&2
 
   return 0
@@ -515,12 +515,12 @@ clone_one_repo() {
       [[ "$debug" == true ]] && echo "clone_one_repo: remote matches, skipping" >&2
       CLONE_DEST="$dest"
       remember_remote "$remote_https" "$dest"
-      ((CNT_SKIPPED++))
+      CNT_SKIPPED=$((CNT_SKIPPED + 1))
       return 2   # benign skip
     else
       echo "Skip: $dest is a Git repo for '$existing_https' (wanted '$remote_https'); leaving as-is."
       [[ "$debug" == true ]] && echo "clone_one_repo: remote mismatch, skipping" >&2
-      ((CNT_SKIPPED++))
+      CNT_SKIPPED=$((CNT_SKIPPED + 1))
       # Do NOT set CLONE_DEST or remember_remote here
       return 2   # benign skip
     fi
@@ -537,12 +537,12 @@ clone_one_repo() {
       [[ "$debug" == true ]] && echo "clone_one_repo: is a git repo, skipping" >&2
       CLONE_DEST="$dest"
       remember_remote "$remote_https" "$dest"
-      ((CNT_SKIPPED++))
+      CNT_SKIPPED=$((CNT_SKIPPED + 1))
       return 2
     else
       echo "Skip: $dest exists and is not empty (non-Git); leaving as-is."
       [[ "$debug" == true ]] && echo "clone_one_repo: not a git repo, skipping" >&2
-      ((CNT_SKIPPED++))
+      CNT_SKIPPED=$((CNT_SKIPPED + 1))
       # Do NOT set CLONE_DEST or remember_remote here
       return 2  # benign skip
     fi
@@ -559,7 +559,7 @@ clone_one_repo() {
       clone_opts+=("--branch" "$ref")
       echo "Cloning $repo_url → $dest (branch $ref)"
       git clone "${clone_opts[@]}" "$repo_url" "$dest" </dev/null
-      ((CNT_CLONED_BRANCH++))
+      CNT_CLONED_BRANCH=$((CNT_CLONED_BRANCH + 1))
       CLONE_DEST="$dest"
       remember_remote "$remote_https" "$dest"
       [[ "$debug" == true ]] && echo "clone_one_repo: branch clone successful" >&2
@@ -571,7 +571,7 @@ clone_one_repo() {
       echo "Remote branch '$ref' not found on $repo_url; creating it."
       echo "Cloning default branch of $repo_url → $dest"
       git clone "${clone_opts[@]}" "$repo_url" "$dest" </dev/null
-      ((CNT_CLONED_BRANCH++))
+      CNT_CLONED_BRANCH=$((CNT_CLONED_BRANCH + 1))
       CLONE_DEST="$dest"
       remember_remote "$remote_https" "$dest"
       # Create the new branch locally and publish it upstream with tracking.
@@ -587,11 +587,12 @@ clone_one_repo() {
     if [ "${all_branches:-0}" -eq 0 ]; then clone_opts=(--single-branch); fi
     echo "Cloning $repo_url → $dest"
     git clone "${clone_opts[@]}" "$repo_url" "$dest" </dev/null
-    ((CNT_CLONED_FULL++))
+    CNT_CLONED_FULL=$((CNT_CLONED_FULL + 1))
     CLONE_DEST="$dest"
     remember_remote "$remote_https" "$dest"
     [[ "$debug" == true ]] && echo "clone_one_repo: full clone successful" >&2
   fi
+  return 0
 }
 
 # --- Worktree flow -----------------------------------------------------------
@@ -611,7 +612,7 @@ create_worktree_for_branch() {
   if [ -n "$existing_wt" ]; then
     echo "Skip: branch '$branch' already checked out at $existing_wt"
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: branch already checked out, skipping" >&2
-    ((CNT_SKIPPED++))
+    CNT_SKIPPED=$((CNT_SKIPPED + 1))
     return 2
   fi
 
@@ -639,7 +640,7 @@ create_worktree_for_branch() {
       echo "Skip: $dest already exists and is a Git dir; leaving as-is."
     fi
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: destination exists, skipping" >&2
-    ((CNT_SKIPPED++))
+    CNT_SKIPPED=$((CNT_SKIPPED + 1))
     return 2  # benign skip
   fi
 
@@ -651,7 +652,7 @@ create_worktree_for_branch() {
   if [ -n "$(ls -A "$dest" 2>/dev/null)" ]; then
     echo "Skip: destination '$dest' exists and is not empty; not touching it." >&2
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: destination non-empty, skipping" >&2
-    (( CNT_SKIPPED++ ))
+    CNT_SKIPPED=$((CNT_SKIPPED + 1))
     return 2  # benign skip
   fi
 
@@ -659,7 +660,7 @@ create_worktree_for_branch() {
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: local branch exists, adding worktree" >&2
     echo "Adding worktree $dest (existing local branch '$branch')"
     git -C "$base" worktree add "$dest" "$branch" </dev/null
-    ((CNT_WORKTREE_ADDED++))
+    CNT_WORKTREE_ADDED=$((CNT_WORKTREE_ADDED + 1))
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: worktree added, setting upstream if needed" >&2
     if git -C "$base" rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
       git -C "$dest" branch --set-upstream-to="origin/$branch" || true
@@ -673,7 +674,7 @@ create_worktree_for_branch() {
     git -C "$base" fetch origin "refs/heads/$branch:refs/remotes/origin/$branch" || true
     if git -C "$base" rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
       git -C "$base" worktree add -b "$branch" "$dest" "origin/$branch" </dev/null
-      ((CNT_WORKTREE_ADDED++))
+      CNT_WORKTREE_ADDED=$((CNT_WORKTREE_ADDED + 1))
       git -C "$dest" branch --set-upstream-to "origin/$branch" || true
       [[ "$debug" == true ]] && echo "create_worktree_for_branch: worktree added from origin/$branch" >&2
     else
@@ -686,7 +687,7 @@ create_worktree_for_branch() {
       if ! remote_branch_exists "$base" "$defb"; then base_ref="HEAD"; fi
       echo "Could not resolve origin/$branch locally; creating from $base_ref instead"
       git -C "$base" worktree add -b "$branch" "$dest" "$base_ref" </dev/null
-      ((CNT_WORKTREE_ADDED++))
+      CNT_WORKTREE_ADDED=$((CNT_WORKTREE_ADDED + 1))
       git -C "$dest" push -u origin HEAD:"$branch" || true
     fi
   else
@@ -703,9 +704,10 @@ create_worktree_for_branch() {
     echo "Adding worktree $dest (new branch '$branch' from $base_ref)"
     git -C "$base" worktree add -b "$branch" "$dest" "$base_ref" </dev/null
     git -C "$dest" push -u origin HEAD:"$branch" || true
-    ((CNT_WORKTREE_ADDED++))
+    CNT_WORKTREE_ADDED=$((CNT_WORKTREE_ADDED + 1))
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: worktree added and pushed" >&2
   fi
+  return 0
 }
 
 # --- Argument parsing --------------------------------------------------------
@@ -910,8 +912,8 @@ main() {
       fi
       ( exit "$rc" )
     }
-    [[ "$DEBUG" == true ]] && echo "Finished processing line: $CURRENT_LINE" >&2
     line_rc=$?
+    [[ "$DEBUG" == true ]] && echo "Finished processing line: $CURRENT_LINE" >&2
     set -e
 
     [[ "$DEBUG" == true ]] && echo "Line result code: $line_rc" >&2
@@ -923,7 +925,7 @@ main() {
     case "$line_rc" in
       0) : ;;
       2) printf '↷ skipped: %s\n' "$CURRENT_LINE" >&2 ;;
-      *) printf '✖ line failed (rc=%s): %s\n' "$line_rc" "$CURRENT_LINE" >&2; ((CNT_ERRORS++)) ;;
+      *) printf '✖ line failed (rc=%s): %s\n' "$line_rc" "$CURRENT_LINE" >&2; CNT_ERRORS=$((CNT_ERRORS + 1)) ;;
     esac
     [[ "$DEBUG" == true ]] && echo "Moving to next line." >&2
   done <"$REPOS_FILE"
