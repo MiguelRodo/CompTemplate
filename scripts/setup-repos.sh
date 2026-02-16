@@ -56,7 +56,7 @@ for script in "$CREATE_SCRIPT" "$CLONE_SCRIPT" "$WORKSPACE_SCRIPT"; do
   [ -x "$script" ] || { echo "Error: '$script' not found or not executable." >&2; exit 1; }
 done
 
-echo "=== 1) Creating repos on GitHub ==="
+echo "=== 1) Creating repos ==="
 create_args=( -f "$REPOS_FILE" )
 $PUBLIC_FLAG && create_args+=( --public )
 "$CREATE_SCRIPT" "${create_args[@]}"
