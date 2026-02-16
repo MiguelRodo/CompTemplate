@@ -172,7 +172,7 @@ if [ -d "$WORK_DIR/data/.git" ]; then
     print_pass "data is a worktree (has .git file, not directory)"
     
     # Verify it points to slides, not lectures
-    GITDIR=$(cat "$WORK_DIR/data/.git" | grep "gitdir:" | cut -d' ' -f2)
+    GITDIR=$(grep "gitdir:" "$WORK_DIR/data/.git" | cut -d' ' -f2)
     if echo "$GITDIR" | grep -q "slides"; then
       print_pass "data worktree is based on slides repository"
     else
