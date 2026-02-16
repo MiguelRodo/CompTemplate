@@ -252,8 +252,19 @@ EOF
 # --- Normalisation helpers ---------------------------------------------------
 normalise_remote_to_https() {
   # Convert a remote URL to https://host/owner/repo (no .git)
+  # Normalize file:// and absolute paths to absolute path form
   local url="$1" host path
   case "$url" in
+    file://*)
+      # Convert file:///path to /path
+      url="${url#file://}"
+      url="${url%.git}"
+      printf '%s\n' "$url"
+      ;;
+    /*)
+      url="${url%.git}"
+      printf '%s\n' "$url"
+      ;;
     https://*)
       url="${url%.git}"
       printf '%s\n' "$url"
@@ -277,10 +288,25 @@ normalise_remote_to_https() {
 
 spec_to_https() {
   # owner/repo → https://github.com/owner/repo ; https stays https
+  # file://... → /... (normalized to absolute path)
+  # /absolute/path → stays /absolute/path
   local spec="$1"
   case "$spec" in
+    file://*)
+      # Convert file:///path to /path for consistency
+      spec="${spec#file://}"
+      printf '%s\n' "${spec%.git}"
+      ;;
     https://*) printf '%s\n' "${spec%.git}" ;;
-    */*)       printf 'https://github.com/%s\n' "${spec%.git}" ;;
+    /*) printf '%s\n' "${spec%.git}" ;;
+    */*)
+      # Only convert to GitHub URL if it looks like owner/repo (not a path)
+      if [[ "$spec" =~ ^[^/]+/[^/]+(@.*)?$ ]]; then
+        printf 'https://github.com/%s\n' "${spec%.git}"
+      else
+        printf '%s\n' "${spec%.git}"
+      fi
+      ;;
     *)         printf '%s\n' "$spec" ;;
   esac
 }
@@ -419,13 +445,28 @@ clone_one_repo() {
 
   local repo_url repo_dir
   case "$repo_url_no_ref" in
+    file://*)
+      repo_url="$repo_url_no_ref"
+      repo_dir=$(basename "${repo_url_no_ref%.git}")
+      ;;
+    /*)
+      repo_url="$repo_url_no_ref"
+      repo_dir=$(basename "${repo_url_no_ref%.git}")
+      ;;
     https://*)
       repo_url="$repo_url_no_ref"
       repo_dir=$(basename "${repo_url_no_ref%.git}")
       ;;
     */*)
-      repo_url="https://github.com/$repo_url_no_ref"
-      repo_dir="${repo_url_no_ref#*/}"
+      # Only convert to GitHub URL if it looks like owner/repo (not a path)
+      if [[ "$repo_url_no_ref" =~ ^[^/]+/[^/]+$ ]]; then
+        repo_url="https://github.com/$repo_url_no_ref"
+        repo_dir="${repo_url_no_ref#*/}"
+      else
+        # Looks like a path with multiple slashes
+        repo_url="$repo_url_no_ref"
+        repo_dir=$(basename "${repo_url_no_ref%.git}")
+      fi
       ;;
     *)
       echo "Error: invalid repo spec '$repo_spec'." >&2; return 1 ;;

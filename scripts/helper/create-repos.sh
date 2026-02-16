@@ -40,22 +40,23 @@ done
 
 [ -f "$REPOS_FILE" ] || { echo "Error: '$REPOS_FILE' not found." >&2; exit 1; }
 
-# ── CREDENTIALS WITH FALLBACK ────────────────────────────────────────────────────
-if [ -z "${GH_TOKEN-}" ] || [ -z "${GH_USER-}" ]; then
-  creds=$(
-    printf 'url=https://github.com\n\n' \
-      | git -c credential.interactive=false credential fill
-  )
-  [ -z "${GH_USER-}" ] && \
-    GH_USER=$(printf '%s\n' "$creds" | awk -F= '/^username=/ {print $2}')
-  [ -z "${GH_TOKEN-}" ] && \
-    GH_TOKEN=$(printf '%s\n' "$creds" | awk -F= '/^password=/ {print $2}')
-  : "${GH_USER:?Could not retrieve GitHub username}"
-  : "${GH_TOKEN:?Could not retrieve GitHub token}"
-fi
+# ── CREDENTIALS WITH FALLBACK (will be retrieved only if needed) ────────────────
+get_credentials() {
+  if [ -z "${GH_TOKEN-}" ] || [ -z "${GH_USER-}" ]; then
+    creds=$(
+      printf 'url=https://github.com\n\n' \
+        | git -c credential.interactive=false credential fill
+    )
+    [ -z "${GH_USER-}" ] && \
+      GH_USER=$(printf '%s\n' "$creds" | awk -F= '/^username=/ {print $2}')
+    [ -z "${GH_TOKEN-}" ] && \
+      GH_TOKEN=$(printf '%s\n' "$creds" | awk -F= '/^password=/ {print $2}')
+    : "${GH_USER:?Could not retrieve GitHub username}"
+    : "${GH_TOKEN:?Could not retrieve GitHub token}"
+  fi
+}
 
 API_URL="https://api.github.com"
-AUTH_HDR="Authorization: token $GH_TOKEN"
 if $PRIVATE_FLAG; then JSON_PRIVATE=true; else JSON_PRIVATE=false; fi
 
 # ── Helpers for branch creation ────────────────────────────────────────────────
@@ -87,10 +88,40 @@ while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in ''|\#*) continue ;; esac
 
   repo_spec=${line%%[[:space:]]*}
+  
+  # Skip @branch lines (worktrees)
+  case "$repo_spec" in
+    @*) continue ;;
+  esac
+  
+  # Skip local remotes (file:// URLs and absolute paths)
+  case "$repo_spec" in
+    file://*|/*)
+      echo "Skipping local remote: $repo_spec"
+      continue
+      ;;
+  esac
+  
+  # Skip non-GitHub HTTPS/SSH URLs
+  case "$repo_spec" in
+    https://github.com/*|git@github.com:*|ssh://git@github.com/*)
+      # This is a GitHub URL, process it
+      ;;
+    https://*|git@*|ssh://*)
+      # This is a non-GitHub remote URL
+      echo "Skipping non-GitHub remote: $repo_spec"
+      continue
+      ;;
+  esac
+  
   repo_path=${repo_spec%@*}
   owner=${repo_path%%/*}
   repo=${repo_path##*/}
   case "$repo_spec" in *@*) branch=${repo_spec##*@} ;; *) branch="" ;; esac
+
+  # Get credentials only when we need them (for GitHub repos)
+  get_credentials
+  AUTH_HDR="Authorization: token $GH_TOKEN"
 
   # 1) Determine owner type (User vs Organization)
   owner_info=$(curl -s -H "$AUTH_HDR" "$API_URL/users/$owner")
