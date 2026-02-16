@@ -21,9 +21,14 @@ Usage: $0 [-f <repo-list>] [-p|--public]
   -p, --public    create repos as public (default: private)
   -h, --help      show this message and exit
 
-Each non-blank, non-# line of <repo-list> should start with:
+Each non-blank, non-# line of <repo-list> can be:
   owner/repo[@branch] [target_directory]
-Branches and target directories are ignored.
+    Creates/checks the repo and optionally checks the branch exists.
+  @branch [target_directory]
+    Checks if the branch exists on the "fallback repo" (the most recently
+    processed owner/repo line). If not in a git repo, fallback starts empty.
+
+Target directories are informational only (used by clone-repos.sh).
 EOF
   exit 1
 }
