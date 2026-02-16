@@ -40,26 +40,6 @@
         "dotfiles.repository": "https://github.com/SATVILab/dotfiles.git",
         "dotfiles.targetPath": "$HOME/.dotfiles"
       }
-    },
-    "codespaces": {
-      "repositories": {
-        "file:///tmp/tmp.bAQTzoldid/bare-repos/repo1": {
-          "permissions": {
-            "actions": "write",
-            "contents": "write",
-            "packages": "read",
-            "workflows": "write"
-          }
-        },
-        "file:///tmp/tmp.bAQTzoldid/bare-repos/repo2": {
-          "permissions": {
-            "actions": "write",
-            "contents": "write",
-            "packages": "read",
-            "workflows": "write"
-          }
-        }
-      }
     }
   }
 }
