@@ -10,6 +10,7 @@ This repository provides infrastructure for multi-repository R-based computation
 - [Running the Pipeline](#running-the-pipeline)
 - [Managing Worktrees](#managing-worktrees)
 - [Devcontainer Setup](#devcontainer-setup)
+- [Troubleshooting](#troubleshooting)
 - [For Template Maintainers](#for-template-maintainers)
 
 ## Quick Start
