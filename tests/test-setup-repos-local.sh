@@ -155,7 +155,7 @@ file://$REPO2_BARE
 EOF
 
 print_info "Running clone-repos.sh with file:// URLs..."
-"$CLONE_SCRIPT" -f repos.list 2>&1 >/dev/null || true  # Don't fail on non-zero exit
+"$CLONE_SCRIPT" -f repos.list >/dev/null 2>&1 || true  # Don't fail on non-zero exit
 # Check if repos were cloned successfully regardless of exit code
 if [ -d "$TEST_ROOT/testrepo1" ] && [ -d "$TEST_ROOT/workspace1-dev" ]; then
   print_pass "Cloned testrepo1 and created dev worktree"
@@ -196,7 +196,7 @@ $REPO1_BARE
 EOF
 
 print_info "Running clone-repos.sh with absolute paths..."
-"$CLONE_SCRIPT" -f repos.list 2>&1 >/dev/null || true  # Don't fail on non-zero exit
+"$CLONE_SCRIPT" -f repos.list >/dev/null 2>&1 || true  # Don't fail on non-zero exit
 # Check for sanitized directory name (feature/test → feature-test)
 if [ -d "$TEST_ROOT/testrepo1" ] && [ -d "$TEST_ROOT/workspace2-feature-test" ]; then
   print_pass "Cloned with absolute path and created worktree with sanitized name"
@@ -241,7 +241,7 @@ EOF
 
 print_info "Running setup-repos.sh with local remotes..."
 # setup-repos.sh should handle this gracefully now with our fix
-if "$SETUP_SCRIPT" -f repos.list 2>&1 >/dev/null; then
+if "$SETUP_SCRIPT" -f repos.list >/dev/null 2>&1; then
   print_pass "setup-repos.sh completed without errors"
   
   # Verify repos were cloned
@@ -277,12 +277,12 @@ file://$REPO1_BARE
 EOF
 
 # Clone the repos first
-"$CLONE_SCRIPT" -f repos.list 2>&1 >/dev/null || true
+"$CLONE_SCRIPT" -f repos.list >/dev/null 2>&1 || true
 
 # Generate workspace file
 WORKSPACE_SCRIPT="$PROJECT_ROOT/scripts/helper/vscode-workspace-add.sh"
 if [ -x "$WORKSPACE_SCRIPT" ]; then
-  if "$WORKSPACE_SCRIPT" -f repos.list 2>&1 >/dev/null; then
+  if "$WORKSPACE_SCRIPT" -f repos.list >/dev/null 2>&1; then
     if [ -f "entire-project.code-workspace" ]; then
       print_pass "Workspace file created for local remotes"
       
@@ -326,7 +326,7 @@ file://$REPO1_BARE@dev
 EOF
 
 print_info "Running clone-repos.sh for single-branch from local remote..."
-"$CLONE_SCRIPT" -f repos.list 2>&1 >/dev/null || true
+"$CLONE_SCRIPT" -f repos.list >/dev/null 2>&1 || true
 if [ -d "$TEST_ROOT/testrepo1" ]; then
   print_pass "Single-branch clone from local remote succeeded"
   

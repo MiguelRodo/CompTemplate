@@ -163,7 +163,7 @@ cat > repos.list <<EOF
 file://$BARE_REPO
 EOF
 
-"$PROJECT_ROOT/scripts/helper/clone-repos.sh" -f repos.list 2>&1 >/dev/null || true
+"$PROJECT_ROOT/scripts/helper/clone-repos.sh" -f repos.list >/dev/null 2>&1 || true
 
 if [ -d "$TEST_ROOT/test-bare" ]; then
   print_pass "Successfully cloned from file:// URL"
@@ -185,7 +185,7 @@ cat > repos.list <<EOF
 $BARE_REPO
 EOF
 
-"$PROJECT_ROOT/scripts/helper/clone-repos.sh" -f repos.list 2>&1 >/dev/null || true
+"$PROJECT_ROOT/scripts/helper/clone-repos.sh" -f repos.list >/dev/null 2>&1 || true
 
 if [ -d "$TEST_ROOT/test-bare" ]; then
   print_pass "Successfully cloned from absolute path"
