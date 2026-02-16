@@ -293,13 +293,27 @@ scripts/update-branches.sh --dry-run
 
 ### Remove a Worktree
 
+Always use `git worktree remove` to properly remove worktrees:
+
 ```bash
-# Remove the worktree
+# Correct way: Remove the worktree using git
 git worktree remove ../CompTemplate-data-tidy
 
 # Remove from repos.list manually
 # Remove from workspace
 scripts/helper/vscode-workspace-add.sh
+```
+
+**Important**: If you manually delete a worktree directory (e.g., `rm -rf ../worktree-name`), git will have a stale reference that prevents re-adding that branch. The setup scripts now automatically prune stale worktree references, but it's best to use `git worktree remove` to avoid this issue.
+
+If you encounter stale worktree errors, you can manually prune them:
+
+```bash
+# Clean up stale worktree references
+git worktree prune
+
+# Or if you need to force-remove a specific worktree
+git worktree remove --force ../CompTemplate-data-tidy
 ```
 
 ## Devcontainer Setup
@@ -346,9 +360,24 @@ To disable: Remove the `on.push` section in `.github/workflows/devcontainer-buil
 
 ### Using in Codespaces
 
-1. Ensure `GH_TOKEN` is set as a Codespaces secret
-2. Token needs permissions to clone specified repositories
+**Authentication Required**: The setup scripts run in non-interactive mode and require GitHub credentials to clone and push to repositories.
+
+1. **Set up GitHub Token** (Required):
+   - Go to [Codespaces secrets settings](https://github.com/settings/codespaces)
+   - Add `GH_TOKEN` as a Codespaces secret with your personal access token
+   - Token needs permissions to clone/push to your specified repositories
+
+2. **Token Permissions**: Your token should have:
+   - `repo` scope for private repositories
+   - `public_repo` scope for public repositories
+
 3. Codespaces will automatically use the pre-built image
+
+**Alternative Authentication Methods**:
+- **SSH**: Configure SSH keys in your Codespaces settings for git@github.com URLs
+- **gh CLI**: The `gh auth login` command (automatically configured in Codespaces)
+
+**For CI/CD environments**: The setup scripts will check for authentication and fail early with a helpful error message if credentials are not available.
 
 ### Dotfiles Configuration
 
@@ -358,6 +387,57 @@ For additional container customization (e.g., radian settings):
 git clone https://github.com/SATVILab/dotfiles.git "$HOME"/dotfiles
 "$HOME"/dotfiles/install-env.sh dev
 ```
+
+## Troubleshooting
+
+### Authentication Errors
+
+If you see errors like `could not read Username for 'https://github.com': terminal prompts disabled`, the scripts are running in non-interactive mode without credentials.
+
+**Solution**:
+1. Set `GH_TOKEN` environment variable:
+   ```bash
+   export GH_TOKEN="your_github_personal_access_token"
+   ```
+
+2. For Codespaces: Add `GH_TOKEN` as a repository or user secret in [Codespaces settings](https://github.com/settings/codespaces)
+
+3. Alternative: Use SSH URLs and configure SSH keys, or authenticate with `gh auth login`
+
+### Stale Worktree Errors
+
+If you see `fatal: 'branch-name' is already checked out at 'path/to/deleted/worktree'`:
+
+**Cause**: You manually deleted a worktree directory (e.g., `rm -rf`) instead of using `git worktree remove`.
+
+**Solution**: The setup scripts now automatically prune stale worktrees, but you can manually fix it:
+```bash
+# Prune stale worktree references
+git worktree prune
+
+# Verify the stale reference is gone
+git worktree list
+```
+
+**Prevention**: Always use `git worktree remove` to properly remove worktrees:
+```bash
+git worktree remove ../worktree-directory
+```
+
+### Clone/Push Failures
+
+If cloning or pushing fails:
+
+1. **Check your token permissions**: Ensure your `GH_TOKEN` has `repo` scope for private repos or `public_repo` for public repos
+
+2. **Verify repository access**: Make sure you have access to all repositories listed in `repos.list`
+
+3. **Check network connectivity**: Ensure you can reach github.com
+
+4. **Debug mode**: Run scripts with debug flag to see detailed output:
+   ```bash
+   scripts/helper/clone-repos.sh --debug
+   ```
 
 ## For Template Maintainers
 
