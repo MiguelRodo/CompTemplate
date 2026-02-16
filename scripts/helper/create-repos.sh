@@ -153,7 +153,7 @@ while IFS= read -r line || [ -n "$line" ]; do
       branch=${branch%%[[:space:]]*}
       
       if [ -z "$fallback_owner" ] || [ -z "$fallback_repo" ]; then
-        echo "Warning: @$branch has no fallback repo; skipping branch check."
+        echo "Warning: @$branch cannot be processed - no previous owner/repo line found to use as fallback repository; skipping branch check."
         continue
       fi
       

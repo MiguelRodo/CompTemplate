@@ -61,7 +61,8 @@ fi
 
 # Test 3: Check that @branch lines are no longer skipped unconditionally
 print_test "Script processes @branch lines"
-if grep -q '@\*) continue' "$CREATE_SCRIPT"; then
+# The old code had: @*) continue ;; which would skip all @branch lines
+if grep -qF '@*) continue ;;' "$CREATE_SCRIPT"; then
   print_fail "Script still skips @branch lines unconditionally"
   exit 1
 else
