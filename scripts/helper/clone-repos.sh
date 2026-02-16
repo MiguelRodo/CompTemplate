@@ -875,9 +875,18 @@ main() {
         if [ "$fallback_repo_https" = "$current_repo_https" ]; then
           base_abs="$start_dir"
         else
-          local base_name; base_name="$(plan_base_name "$fallback_repo_https")"
-          base_abs="$parent_dir/$base_name"
-          ensure_base_exists "$fallback_repo_https" "$base_abs" "$DEBUG" || rc=$?
+          # Check if this remote was already cloned (possibly with a custom directory)
+          local idx; idx="$(remote_index "$fallback_repo_https")"
+          if [ "$idx" -ge 0 ] && [ -n "${REMOTE_LOCAL_PATH[$idx]}" ]; then
+            # Use the actual path where it was cloned
+            base_abs="${REMOTE_LOCAL_PATH[$idx]}"
+            [[ "$DEBUG" == true ]] && echo "Using existing clone at '$base_abs' for worktree base" >&2
+          else
+            # Not cloned yet, use planned base name
+            local base_name; base_name="$(plan_base_name "$fallback_repo_https")"
+            base_abs="$parent_dir/$base_name"
+            ensure_base_exists "$fallback_repo_https" "$base_abs" "$DEBUG" || rc=$?
+          fi
         fi
         [ $rc -eq 0 ] && create_worktree_for_branch "$base_abs" "$branch" "$target_dir" "$parent_dir" "$DEBUG" || rc=$?
         fallback_repo_local="$base_abs"
