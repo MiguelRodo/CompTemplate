@@ -40,7 +40,7 @@ print_fail() {
 }
 
 print_info() {
-  echo -e "${BLUE}ℹ️  $1${NC}"
+  echo -e "${BLUE}INFO: $1${NC}"
 }
 
 # Get script directory

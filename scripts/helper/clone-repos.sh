@@ -913,6 +913,7 @@ main() {
       ( exit "$rc" )
     }
     line_rc=$?
+    # Note: Debug statement must be after line_rc=$? to avoid capturing debug statement's exit code
     [[ "$DEBUG" == true ]] && echo "Finished processing line: $CURRENT_LINE" >&2
     set -e
 
