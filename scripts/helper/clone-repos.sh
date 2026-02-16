@@ -173,6 +173,70 @@ check_prerequisites() {
   return 0
 }
 
+check_non_interactive_auth() {
+  local debug="$1"
+  [[ "$debug" == true ]] && echo "Checking for non-interactive authentication..." >&2
+  
+  # Check if we're in a non-interactive environment (GIT_TERMINAL_PROMPT=0 is already set)
+  # We need at least one working authentication method
+  
+  local has_auth=0
+  
+  # 1. Check for GH_TOKEN
+  if [ -n "${GH_TOKEN:-}" ]; then
+    [[ "$debug" == true ]] && echo "✓ GH_TOKEN is set" >&2
+    has_auth=1
+  fi
+  
+  # 2. Check for gh CLI authentication
+  if command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+      [[ "$debug" == true ]] && echo "✓ gh CLI is authenticated" >&2
+      has_auth=1
+    fi
+  fi
+  
+  # 3. Check for SSH agent (for git@github.com URLs)
+  if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
+    if command -v ssh-add >/dev/null 2>&1; then
+      if ssh-add -l >/dev/null 2>&1; then
+        [[ "$debug" == true ]] && echo "✓ SSH agent has keys" >&2
+        has_auth=1
+      fi
+    fi
+  fi
+  
+  # If no authentication method is available, fail early with helpful message
+  if [ "$has_auth" -eq 0 ]; then
+    cat >&2 <<'EOF'
+Error: No non-interactive GitHub authentication available.
+
+This script runs in non-interactive mode and requires credentials for cloning/pushing.
+
+Please set up one of the following:
+
+1. GitHub Token:
+   export GH_TOKEN="your_github_token"
+   
+   For Codespaces, add GH_TOKEN as a Codespaces secret:
+   https://github.com/settings/codespaces
+
+2. GitHub CLI:
+   gh auth login
+   
+3. SSH Agent (for SSH URLs):
+   eval "$(ssh-agent -s)"
+   ssh-add ~/.ssh/id_rsa
+
+For more details, see: README.md
+EOF
+    return 1
+  fi
+  
+  [[ "$debug" == true ]] && echo "Non-interactive authentication check passed." >&2
+  return 0
+}
+
 # --- Usage -------------------------------------------------------------------
 usage() {
   cat <<'EOF'
@@ -605,6 +669,11 @@ create_worktree_for_branch() {
   [ -z "$branch" ] && { echo "Error: @branch requires a branch name."; return 1; }
   [ -z "$base" ] && { echo "Error: no fallback base path available for worktree."; return 1; }
 
+  # Prune stale worktree references (e.g., from manually deleted directories)
+  # This prevents errors like "branch is already used by worktree at <deleted-path>"
+  [[ "$debug" == true ]] && echo "create_worktree_for_branch: pruning stale worktree references" >&2
+  git -C "$base" worktree prune </dev/null || true
+
   # If this branch is already checked out in any worktree, skip
   [[ "$debug" == true ]] && echo "create_worktree_for_branch: checking if branch already checked out" >&2
   local existing_wt
@@ -825,6 +894,7 @@ plan_forward() {
 main() {
   parse_args "$@"
   check_prerequisites "$DEBUG"
+  check_non_interactive_auth "$DEBUG"
 
   local start_dir parent_dir
   start_dir="$(pwd)"
