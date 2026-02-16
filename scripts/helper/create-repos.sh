@@ -83,15 +83,102 @@ create_branch() {
     "$API_URL/repos/$owner/$repo/git/refs"
 }
 
+# ── Get current repo info (for initial fallback) ───────────────────────────────
+get_current_repo_info() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    # Get origin URL
+    local origin_url
+    origin_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+    
+    if [ -z "$origin_url" ]; then
+      return 1
+    fi
+    
+    # Convert to HTTPS format and extract owner/repo
+    case "$origin_url" in
+      https://github.com/*)
+        origin_url=${origin_url#https://github.com/}
+        ;;
+      git@github.com:*)
+        origin_url=${origin_url#git@github.com:}
+        ;;
+      ssh://git@github.com/*)
+        origin_url=${origin_url#ssh://git@github.com/}
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+    
+    # Remove .git suffix
+    origin_url=${origin_url%.git}
+    
+    # Extract owner and repo
+    local owner repo
+    owner=${origin_url%%/*}
+    repo=${origin_url#*/}
+    
+    # Set global fallback variables
+    fallback_owner="$owner"
+    fallback_repo="$repo"
+    return 0
+  fi
+  return 1
+}
+
 # ── MAIN LOOP ─────────────────────────────────────────────────────────────────
+# Track fallback repo for @branch lines (similar to clone-repos.sh)
+fallback_owner=""
+fallback_repo=""
+
+# Initialize fallback to current repo (if we're in a git repo)
+get_current_repo_info || true  # Don't fail if not in a git repo
+
+
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in ''|\#*) continue ;; esac
 
   repo_spec=${line%%[[:space:]]*}
   
-  # Skip @branch lines (worktrees)
+  # Handle @branch lines (worktrees) - check branch on fallback repo
   case "$repo_spec" in
-    @*) continue ;;
+    @*)
+      branch=${repo_spec#@}
+      # Extract branch name, removing any options like --no-worktree
+      branch=${branch%%[[:space:]]*}
+      
+      if [ -z "$fallback_owner" ] || [ -z "$fallback_repo" ]; then
+        echo "Warning: @$branch has no fallback repo; skipping branch check."
+        continue
+      fi
+      
+      # Get credentials if needed
+      get_credentials
+      AUTH_HDR="Authorization: token $GH_TOKEN"
+      
+      # Check if branch exists on fallback repo
+      ref_status=$(
+        curl -s -o /dev/null -w "%{http_code}" \
+          -H "$AUTH_HDR" \
+          "$API_URL/repos/$fallback_owner/$fallback_repo/git/refs/heads/$branch"
+      )
+      if [ "$ref_status" -eq 200 ]; then
+        echo "Branch exists: $branch"
+      elif [ "$ref_status" -eq 404 ]; then
+        printf "Creating branch %s on %s/%s ... " "$branch" "$fallback_owner" "$fallback_repo"
+        code=$( create_branch "$fallback_owner" "$fallback_repo" "$branch" )
+        if [ "$code" -eq 201 ]; then
+          echo "done."
+        else
+          echo "failed (HTTP $code)."
+        fi
+      else
+        echo "Error checking branch $branch on $fallback_owner/$fallback_repo (HTTP $ref_status)."
+      fi
+      
+      # @branch lines don't change the fallback
+      continue
+      ;;
   esac
   
   # Skip local remotes (file:// URLs and absolute paths)
@@ -199,5 +286,9 @@ while IFS= read -r line || [ -n "$line" ]; do
       echo "Error checking branch $branch (HTTP $ref_status)."
     fi
   fi
+  
+  # Update fallback repo for subsequent @branch lines
+  fallback_owner="$owner"
+  fallback_repo="$repo"
 
 done < "$REPOS_FILE"
