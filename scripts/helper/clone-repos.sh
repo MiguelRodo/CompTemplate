@@ -488,7 +488,7 @@ ensure_wildcard_fetch_refspec() {
   local wildcard_refspec="+refs/heads/*:refs/remotes/origin/*"
   
   # Check if wildcard refspec already exists
-  if git -C "$base" config --get-all remote.origin.fetch | grep -qxF "$wildcard_refspec"; then
+  if git -C "$base" config --get-all remote.origin.fetch | grep -qF "$wildcard_refspec"; then
     return 0
   fi
   
