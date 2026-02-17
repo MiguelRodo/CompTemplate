@@ -481,6 +481,21 @@ default_remote_branch() {
 local_branch_exists()   { git -C "$1" rev-parse --verify --quiet "refs/heads/$2" >/dev/null; }
 remote_branch_exists()  { git -C "$1" rev-parse --verify --quiet "refs/remotes/origin/$2" >/dev/null; }
 
+# Ensure wildcard fetch refspec exists for origin remote
+# This is needed for branch tracking to work in single-branch clones
+ensure_wildcard_fetch_refspec() {
+  local base="$1"
+  local wildcard_refspec="+refs/heads/*:refs/remotes/origin/*"
+  
+  # Check if wildcard refspec already exists
+  if git -C "$base" config --get-all remote.origin.fetch | grep -qxF "$wildcard_refspec"; then
+    return 0
+  fi
+  
+  # Add wildcard refspec (does not remove existing refspecs)
+  git -C "$base" config --add remote.origin.fetch "$wildcard_refspec" 2>/dev/null || true
+}
+
 find_worktree_for_branch() {
   local base="$1" branch="$2" line=""
   if line="$(git -C "$base" worktree list 2>/dev/null | grep " \[$branch\]" | head -n1)"; then
@@ -779,6 +794,7 @@ create_worktree_for_branch() {
     CNT_WORKTREE_ADDED=$((CNT_WORKTREE_ADDED + 1))
     [[ "$debug" == true ]] && echo "create_worktree_for_branch: worktree added, setting upstream if needed" >&2
     if git -C "$base" rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
+      ensure_wildcard_fetch_refspec "$base"
       git -C "$dest" branch --set-upstream-to="origin/$branch" || true
     else
       git -C "$dest" push -u origin HEAD:"$branch" || true
@@ -792,6 +808,7 @@ create_worktree_for_branch() {
     if git -C "$base" rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
       git -C "$base" worktree add -b "$branch" "$dest" "origin/$branch" </dev/null
       CNT_WORKTREE_ADDED=$((CNT_WORKTREE_ADDED + 1))
+      ensure_wildcard_fetch_refspec "$base"
       git -C "$dest" branch --set-upstream-to "origin/$branch" || true
       [[ "$debug" == true ]] && echo "create_worktree_for_branch: worktree added from origin/$branch" >&2
     else
