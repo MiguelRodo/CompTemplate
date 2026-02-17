@@ -177,9 +177,6 @@ check_non_interactive_auth() {
   local debug="$1"
   [[ "$debug" == true ]] && echo "Checking for non-interactive authentication..." >&2
   
-  # Check if we're in a non-interactive environment (GIT_TERMINAL_PROMPT=0 is already set)
-  # We need at least one working authentication method
-  
   local has_auth=0
   
   # 1. Check for GH_TOKEN
@@ -206,6 +203,12 @@ check_non_interactive_auth() {
     fi
   fi
   
+  # 4. Check for Git credential helper (e.g., Git Credential Manager)
+  if git config --get credential.helper >/dev/null 2>&1; then
+    [[ "$debug" == true ]] && echo "✓ Git credential helper configured" >&2
+    has_auth=1
+  fi
+    
   # If no authentication method is available, fail early with helpful message
   if [ "$has_auth" -eq 0 ]; then
     cat >&2 <<'EOF'
