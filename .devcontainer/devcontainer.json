@@ -5,7 +5,9 @@
     "context": ".."
   },
   "features": {
-    "ghcr.io/MiguelRodo/DevContainerFeatures/repos:2": {},
+    "ghcr.io/MiguelRodo/DevContainerFeatures/utils:1.1.0": {
+      "installSetupmjr": false
+    },
     "ghcr.io/MiguelRodo/DevContainerFeatures/config-r:2": {
       "debug": true,
       "debugRenv": true

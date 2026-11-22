@@ -1,0 +1,9 @@
+# The utils feature installs repos from MiguelRodo's signed APT repository.
+Package: repos
+Pin: version 2.7.2
+Pin-Priority: 1001
+
+# Fail if the intended package version is unavailable.
+Package: repos
+Pin: version *
+Pin-Priority: -1
