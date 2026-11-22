@@ -12,7 +12,7 @@
       "debug": true,
       "debugRenv": true
     },
-    "ghcr.io/rocker-org/devcontainer-features/r-rig:1": {
+    "ghcr.io/rocker-org/devcontainer-features/r-rig:2": {
       "installDevTools": false,
       "installREnv": true,
       "installRadian": true,
