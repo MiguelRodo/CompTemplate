@@ -4,6 +4,9 @@ FROM bioconductor/bioconductor_docker:RELEASE_3_20
 # Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install the package preferences before devcontainer Features run.
+COPY .devcontainer/cli-versions.pref /etc/apt/preferences.d/cli-versions.pref
+
 # Automatically record build time
 RUN mkdir -p /usr/local/etc/container_metadata && \
     date -u '+BUILD_DATE=%Y-%m-%dT%H:%M:%SZ' \
